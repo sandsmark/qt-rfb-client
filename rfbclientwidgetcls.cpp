@@ -32,36 +32,28 @@ rfbclientwidgetcls::rfbclientwidgetcls(QWidget *parent) :
     QWidget(parent)
 {
     QPalette pl;
-
     this->vncClient.setParent(this);
-
     qDebug() << "GLClient init";
     this->setAutoFillBackground(true);
     this->setWindowTitle("Testing");
     this->setMouseTracking(true);
     this->mouseButtonPressed = 0;
-    this->mouseX =0;
+    this->mouseX = 0;
     this->mouseY = 0;
-    pl.setColor(QPalette::Background,Qt::black);
+    pl.setColor(QPalette::Background, Qt::black);
     this->setPalette(pl);
-
-
-    this->resize(640,480);
-    this->setMinimumSize(640,480);
-    this->setMaximumSize(640,480);
-
+    this->resize(640, 480);
+    this->setMinimumSize(640, 480);
+    this->setMaximumSize(640, 480);
     this->holdCTRLKey = false;
     this->screenGrab = false;
-
-    connect(&this->vncClient,SIGNAL(rfbResizeSignal(qint16,qint16,QString)),this,SLOT(vncResizeSlot(qint16,qint16,QString)),Qt::DirectConnection);
-    connect(&this->vncClient,SIGNAL(rfbFrameBufferUpdateSignal()),this,SLOT(vncFrameBufferUpdateSlot()));
-    connect(&this->vncClient,SIGNAL(rfbHostConnectedSignal()),this,SLOT(vncHostConnectedSlot()));
-    connect(&this->vncClient,SIGNAL(rfbHostDisconnectedSignal()),this,SLOT(vncHostDisconnectedSlot()));
-    connect(&this->vncClient,SIGNAL(rfbPauseSignal()),this,SLOT(vncHostPauseSlot()));
-
+    connect(&this->vncClient, SIGNAL(rfbResizeSignal(qint16, qint16, QString)), this, SLOT(vncResizeSlot(qint16, qint16, QString)), Qt::DirectConnection);
+    connect(&this->vncClient, SIGNAL(rfbFrameBufferUpdateSignal()), this, SLOT(vncFrameBufferUpdateSlot()));
+    connect(&this->vncClient, SIGNAL(rfbHostConnectedSignal()), this, SLOT(vncHostConnectedSlot()));
+    connect(&this->vncClient, SIGNAL(rfbHostDisconnectedSignal()), this, SLOT(vncHostDisconnectedSlot()));
+    connect(&this->vncClient, SIGNAL(rfbPauseSignal()), this, SLOT(vncHostPauseSlot()));
     this->vncConnected = false;
     this->myCursor = this->cursor();
-
     this->lockedVNC = false;
     this->alreadyHasLockedImage = false;
 }
@@ -69,19 +61,17 @@ rfbclientwidgetcls::rfbclientwidgetcls(QWidget *parent) :
 rfbclientwidgetcls::~rfbclientwidgetcls()
 {
     qDebug() << "rfbclientwidgetcls is going to be deleted";
-
-        disconnect(&this->vncClient,SIGNAL(rfbResizeSignal(qint16,qint16,QString)),this,SLOT(vncResizeSlot(qint16,qint16,QString)));
-        disconnect(&this->vncClient,SIGNAL(rfbFrameBufferUpdateSignal()),this,SLOT(vncFrameBufferUpdateSlot()));
-        disconnect(&this->vncClient,SIGNAL(rfbHostConnectedSignal()),this,SLOT(vncHostConnectedSlot()));
-        disconnect(&this->vncClient,SIGNAL(rfbHostDisconnectedSignal()),this,SLOT(vncHostDisconnectedSlot()));
-        disconnect(&this->vncClient,SIGNAL(rfbPauseSignal()),this,SLOT(vncHostPauseSlot()));
-
+    disconnect(&this->vncClient, SIGNAL(rfbResizeSignal(qint16, qint16, QString)), this, SLOT(vncResizeSlot(qint16, qint16, QString)));
+    disconnect(&this->vncClient, SIGNAL(rfbFrameBufferUpdateSignal()), this, SLOT(vncFrameBufferUpdateSlot()));
+    disconnect(&this->vncClient, SIGNAL(rfbHostConnectedSignal()), this, SLOT(vncHostConnectedSlot()));
+    disconnect(&this->vncClient, SIGNAL(rfbHostDisconnectedSignal()), this, SLOT(vncHostDisconnectedSlot()));
+    disconnect(&this->vncClient, SIGNAL(rfbPauseSignal()), this, SLOT(vncHostPauseSlot()));
     qDebug() << "rfbclientwidget deleted";
 }
 
 bool rfbclientwidgetcls::connectVNCTCP(QString server, qint16 port)
 {
-    return this->vncClient.connectToHostTCP(server,port);
+    return this->vncClient.connectToHostTCP(server, port);
 }
 
 bool rfbclientwidgetcls::connectVNCIPC(QString server)
@@ -102,21 +92,21 @@ void rfbclientwidgetcls::vncHostPauseSlot()
 
 void rfbclientwidgetcls::vncHostDisconnectedSlot()
 {
-    if (this->screenGrab)
-    {
+    if (this->screenGrab) {
         this->screenGrab = false;
         qApp->setOverrideCursor(this->myCursor);
         this->releaseKeyboard();
         this->releaseMouse();
-        if (!this->lockedVNC)
-            this->resize(640,480);
+
+        if (!this->lockedVNC) {
+            this->resize(640, 480);
+        }
     }
 
     qDebug("done");
     this->vncConnected = false;
     emit this->rfbClientDisconnectedSignal();
     this->repaint();
-
 }
 
 void rfbclientwidgetcls::vncHostConnectedSlot()
@@ -124,8 +114,7 @@ void rfbclientwidgetcls::vncHostConnectedSlot()
     this->vncConnected = true;
     this->lockedVNC = false;
     this->alreadyHasLockedImage = false;
-
-    this->resize(240,320);
+    this->resize(240, 320);
     emit this->rfbClientConnectedSignal();
     qDebug("Widget:: vnc host connected");
 }
@@ -136,13 +125,12 @@ void rfbclientwidgetcls::vncResizeSlot(qint16 width, qint16 height, QString serv
     this->setWindowTitle("NEMD 3.0: WINXP");
     this->oriRFBHeight = height;
     this->oriRFBWidth = width;
-
     //this->resize(width,height);
     this->setMinimumHeight(480);
     this->setMaximumHeight(height);
     this->setMinimumWidth(640);
     this->setMaximumWidth(width);
-    this->resize(width,height);
+    this->resize(width, height);
     emit this->vncFrameResizeSignal();
 }
 
@@ -161,15 +149,11 @@ void rfbclientwidgetcls::paintEvent(QPaintEvent *)
     EPFrameBuffer::framebuffer()->fill(Qt::white);
     QPainter qp(EPFrameBuffer::framebuffer());
     //qDebug() << "Scaling Img";
-    QImage timg = this->vncClient.getVNCImage().scaled(this->geometry().width(),this->geometry().height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+    QImage timg = this->vncClient.getVNCImage().scaled(this->geometry().width(), this->geometry().height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     //QPixmap tpix = this->vncClient->getVNCPixmap().scaled(this->geometry().width(),this->geometry().height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
-
-
     //qp.drawPixmap(0,0,tpix);
-
-    qp.drawImage(0,0,timg);
+    qp.drawImage(0, 0, timg);
     qp.end();
-
     EPFrameBuffer::sendUpdate(rect(), EPFrameBuffer::Grayscale, EPFrameBuffer::PartialUpdate);
     //qDebug() << "update image";
 }
@@ -184,17 +168,21 @@ void rfbclientwidgetcls::closeEvent(QCloseEvent *e)
 
 void rfbclientwidgetcls::keyPressEvent(QKeyEvent *e)
 {
-    if (this->lockedVNC)
+    if (this->lockedVNC) {
         return;
+    }
 
-    if (!this->vncConnected)
+    if (!this->vncConnected) {
         return;
+    }
 
-    if (e->key() == Qt::Key_Control)
+    if (e->key() == Qt::Key_Control) {
         this->holdCTRLKey = true;
+    }
 
-    if (!this->screenGrab)
+    if (!this->screenGrab) {
         return;
+    }
 
     /*if ((this->holdCTRLKey) && (e->key() == Qt::Key_Alt))
         {
@@ -202,44 +190,51 @@ void rfbclientwidgetcls::keyPressEvent(QKeyEvent *e)
             return;
         }*/
 
-        if (e->modifiers() == Qt::NoModifier)
-            this->vncClient.sendServerKeyEvent(e->key(),1,false);
-        else
-            this->vncClient.sendServerKeyEvent(e->key(),1,true);
-
+    if (e->modifiers() == Qt::NoModifier) {
+        this->vncClient.sendServerKeyEvent(e->key(), 1, false);
+    } else {
+        this->vncClient.sendServerKeyEvent(e->key(), 1, true);
+    }
 }
 
 void rfbclientwidgetcls::keyReleaseEvent(QKeyEvent *e)
 {
-    if (this->lockedVNC)
+    if (this->lockedVNC) {
         return;
+    }
 
-    if (!this->vncConnected)
+    if (!this->vncConnected) {
         return;
+    }
 
-    if (e->key() == Qt::Key_Control)
+    if (e->key() == Qt::Key_Control) {
         this->holdCTRLKey = false;
+    }
 
-    if (!this->screenGrab)
+    if (!this->screenGrab) {
         return;
+    }
 
-
-    if (e->modifiers() == Qt::NoModifier)
-        this->vncClient.sendServerKeyEvent(e->key(),0,false);
-    else
-        this->vncClient.sendServerKeyEvent(e->key(),0,true);
+    if (e->modifiers() == Qt::NoModifier) {
+        this->vncClient.sendServerKeyEvent(e->key(), 0, false);
+    } else {
+        this->vncClient.sendServerKeyEvent(e->key(), 0, true);
+    }
 }
 
 void rfbclientwidgetcls::mouseMoveEvent(QMouseEvent *e)
 {
-    if (this->lockedVNC)
+    if (this->lockedVNC) {
         return;
+    }
 
-    if (!this->vncConnected)
+    if (!this->vncConnected) {
         return;
+    }
 
-    if (!this->screenGrab)
+    if (!this->screenGrab) {
         return;
+    }
 
     double a = this->oriRFBWidth;
     double b = this->geometry().width();
@@ -247,11 +242,9 @@ void rfbclientwidgetcls::mouseMoveEvent(QMouseEvent *e)
     double d = this->geometry().height();
     double fx = (a / b) * e->x();
     double fy = (c / d) * e->y();
-
     this->mouseX = fx;
     this->mouseY = fy;
-
-    this->vncClient.sendServerPointerEvent(this->mouseX,this->mouseY,this->mouseButtonPressed);
+    this->vncClient.sendServerPointerEvent(this->mouseX, this->mouseY, this->mouseButtonPressed);
 }
 
 void rfbclientwidgetcls::ungrabIO()
@@ -273,60 +266,67 @@ void rfbclientwidgetcls::grabIO()
     //qApp->setOverrideCursor(Qt::BlankCursor);
     //this->setCursor(QCursor(Qt::BlankCursor));
     this->screenGrab = true;
-
     //qDebug() << this->mapToGlobal(QPoint(0,0));
-
     //this->cursor().setPos(this->mapToGlobal(QPoint(0,0)));
     emit this->vncGrabIOSIG();
-
 }
 
 void rfbclientwidgetcls::mousePressEvent(QMouseEvent *e)
 {
     //if (this->lockedVNC)
-      //  return;
-
-    if (!this->vncConnected)
+    //  return;
+    if (!this->vncConnected) {
         return;
+    }
 
     /*if (!this->screenGrab)
     {
         this->grabIO();
         return;
     }*/
-
     double a = this->oriRFBWidth;
     double b = this->geometry().width();
     double c = this->oriRFBHeight;
     double d = this->geometry().height();
     double fx = (a / b) * e->x();
     double fy = (c / d) * e->y();
-
     this->mouseX = fx;
     this->mouseY = fy;
 
-    switch (e->button())
-    {
-        case Qt::LeftButton:this->mouseButtonPressed = 1;break;
-        case Qt::RightButton:this->mouseButtonPressed = 4;break;
-        case Qt::MiddleButton: this->mouseButtonPressed = 2;break;
-        default: this->mouseButtonPressed = 0;break;
+    switch (e->button()) {
+    case Qt::LeftButton:
+        this->mouseButtonPressed = 1;
+        break;
+
+    case Qt::RightButton:
+        this->mouseButtonPressed = 4;
+        break;
+
+    case Qt::MiddleButton:
+        this->mouseButtonPressed = 2;
+        break;
+
+    default:
+        this->mouseButtonPressed = 0;
+        break;
     }
 
-    this->vncClient.sendServerPointerEvent(this->mouseX,this->mouseY,this->mouseButtonPressed);
+    this->vncClient.sendServerPointerEvent(this->mouseX, this->mouseY, this->mouseButtonPressed);
 }
 
 void rfbclientwidgetcls::mouseReleaseEvent(QMouseEvent *e)
 {
-    if (this->lockedVNC)
+    if (this->lockedVNC) {
         return;
+    }
 
-    if (!this->vncConnected)
+    if (!this->vncConnected) {
         return;
+    }
 
-    if (!this->screenGrab)
+    if (!this->screenGrab) {
         return;
-
+    }
 
     double a = this->oriRFBWidth;
     double b = this->geometry().width();
@@ -334,10 +334,8 @@ void rfbclientwidgetcls::mouseReleaseEvent(QMouseEvent *e)
     double d = this->geometry().height();
     double fx = (a / b) * e->x();
     double fy = (c / d) * e->y();
-
     this->mouseX = fx;
     this->mouseY = fy;
-
     /*if (this->mouseX < 0)
         this->mouseX = 0;
 
@@ -349,19 +347,21 @@ void rfbclientwidgetcls::mouseReleaseEvent(QMouseEvent *e)
 
     if (this->mouseY > this->geometry().height())
         this->mouseY = this->geometry().height();*/
-
     this->mouseButtonPressed = 0;
-    this->vncClient.sendServerPointerEvent(this->mouseX,this->mouseY,this->mouseButtonPressed);
+    this->vncClient.sendServerPointerEvent(this->mouseX, this->mouseY, this->mouseButtonPressed);
 }
 
 void rfbclientwidgetcls::enterEvent(QEvent *)
 {
-    if (!this->vncConnected)
+    if (!this->vncConnected) {
         return;
+    }
 
     //dont grab if vnc is pause
-    if (this->lockedVNC)
+    if (this->lockedVNC) {
         return;
+    }
+
     this->grabIO();
     /*
     this->screenGrab = true;
@@ -369,41 +369,38 @@ void rfbclientwidgetcls::enterEvent(QEvent *)
     //this->setCursor(QCursor(Qt::BlankCursor));
     this->grabKeyboard();
     emit this->vncFrameGetFocusSignal();*/
-
 }
 
 void rfbclientwidgetcls::leaveEvent(QEvent *)
 {
-    if (!this->vncConnected)
+    if (!this->vncConnected) {
         return;
+    }
 
-    if (this->lockedVNC)
+    if (this->lockedVNC) {
         return;
+    }
 
     this->ungrabIO();
+    /* this->screenGrab = false;
 
-   /* this->screenGrab = false;
+     if (!this->vncConnected)
+         return;
 
-    if (!this->vncConnected)
-        return;
-
-    //this->setCursor(this->myCursor);
-    this->releaseKeyboard();*/
-
+     //this->setCursor(this->myCursor);
+     this->releaseKeyboard();*/
 }
 
 void rfbclientwidgetcls::resizeEvent(QResizeEvent *)
 {
-
 }
 
 bool rfbclientwidgetcls::setPauseRFB()
 {
-    if (this->vncConnected)
-    {
+    if (this->vncConnected) {
         this->lockedVNC = true;
-        if (this->vncClient.pauseRFB())
-        {
+
+        if (this->vncClient.pauseRFB()) {
             this->ungrabIO();
             this->vncConnected = false;
             qDebug() << "repaint for pause";
@@ -411,16 +408,15 @@ bool rfbclientwidgetcls::setPauseRFB()
             return true;
         }
     }
+
     this->lockedVNC = false;
     return false;
 }
 
 bool rfbclientwidgetcls::setResumeRFB()
 {
-    if (!this->vncConnected)
-    {
-        if (this->vncClient.resumeRFB())
-        {
+    if (!this->vncConnected) {
+        if (this->vncClient.resumeRFB()) {
             this->vncConnected = true;
             this->lockedVNC = false;
             qDebug() << "repaint for resume";
@@ -428,5 +424,6 @@ bool rfbclientwidgetcls::setResumeRFB()
             return true;
         }
     }
+
     return false;
 }

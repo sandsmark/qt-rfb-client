@@ -46,7 +46,7 @@ public:
     explicit rfbclientwidgetcls(QWidget *parent = 0);
     ~rfbclientwidgetcls();
 
-    bool connectVNCTCP(QString server, qint16 port=5900);
+    bool connectVNCTCP(QString server, qint16 port = 5900);
     bool connectVNCIPC(QString server);
     void disconnectVNC();
     bool setPauseRFB();
@@ -62,7 +62,7 @@ private:
     quint16 updateX, updateY;
     bool vncConnected;
     quint8 mouseButtonPressed;
-    qint16 mouseX,mouseY;
+    qint16 mouseX, mouseY;
     QCursor myCursor;
 
     qint16 oriRFBWidth, oriRFBHeight;
@@ -89,7 +89,7 @@ signals:
     void vncUngrabIOSIG();
 
 private slots:
-    void vncResizeSlot(qint16 width, qint16 height,QString serverVNCName);
+    void vncResizeSlot(qint16 width, qint16 height, QString serverVNCName);
     void vncFrameBufferUpdateSlot();
     void vncHostConnectedSlot();
     void vncHostDisconnectedSlot();
@@ -98,7 +98,7 @@ private slots:
 
 protected:
     void paintEvent(QPaintEvent *);
-    void closeEvent (QCloseEvent *e);
+    void closeEvent(QCloseEvent *e);
     void keyPressEvent(QKeyEvent *e);
     void keyReleaseEvent(QKeyEvent *e);
     void mouseMoveEvent(QMouseEvent *e);

@@ -40,7 +40,7 @@ public:
     explicit vncclientwidget2cls(QWidget *parent = 0);
     ~vncclientwidget2cls();
 
-    bool connectVNCTCP(QString server, qint16 port=5900);
+    bool connectVNCTCP(QString server, qint16 port = 5900);
     bool connectVNCIPC(QString server);
     void disconnectVNC();
     void updateSize();

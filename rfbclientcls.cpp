@@ -31,17 +31,13 @@ rfbclientcls::rfbclientcls(QObject *parent) :
     QObject(parent)
 {
     pixelFormatStruct pixel_format;
-
-
     this->vncClientTCP.setParent(this);
     this->vncClientIPC.setParent(this);
     this->opsThreadTimer.setParent(this);
-
     this->serverConnected = false;
     this->socketMode = 10; //default TCP
     this->pauseMode = false;
     xEmitDisconnecSignal = false;
-
     //set default client pixel information
     pixel_format.bpp         = 32;
     pixel_format.depth       = 24;
@@ -53,13 +49,10 @@ rfbclientcls::rfbclientcls(QObject *parent) :
     pixel_format.red_shift   = 0x10;
     pixel_format.green_shift = 0x08;
     pixel_format.blue_shift  = 0x00;
-
     qDebug("Setting client pixel");
     this->clientPixelF = pixel_format;
-
     qDebug("Setting client color format");
     this->clientColorFormat = this->getColorFormat(&this->clientPixelF);
-
     qDebug("load default image");
     this->VNCIMAGE = QImage(":/new/prefix1/creditimg.png");
 }
@@ -68,7 +61,6 @@ rfbclientcls::rfbclientcls(QObject *parent) :
 rfbclientcls::~rfbclientcls()
 {
     qDebug() << "rfbclientcls is going to be deleted";
-
     this->disconnectFromHost();
     /*this->opsThreadTimer.stop();
     disconnect(&this->opsThreadTimer,SIGNAL(timeout()),this,SLOT(opsThreadTimerTimeOutSlot()));
@@ -100,39 +92,36 @@ rfbclientcls::~rfbclientcls()
         delete this->vncClientIPC;
         this->vncClientIPC = NULL;
     }*/
-
     qDebug("rfbclientcls deleted");
 }
 
 void rfbclientcls::opsThreadTimerTimeOutSlot()
 {
-        this->processRFBOperationProtocol();
+    this->processRFBOperationProtocol();
 }
 
 void rfbclientcls::processRFBOperationProtocol()
 {
-
-    switch (this->socketMode){
+    switch (this->socketMode) {
     case 0:
-        if (this->vncClientTCP.state() != QTcpSocket::ConnectedState)
-        {
+        if (this->vncClientTCP.state() != QTcpSocket::ConnectedState) {
             this->disconnectFromHost();
             return;
         }
+
         break;
 
     case 1:
-        if (this->vncClientIPC.state() != QLocalSocket::ConnectedState)
-        {
+        if (this->vncClientIPC.state() != QLocalSocket::ConnectedState) {
             this->disconnectFromHost();
             return;
         }
+
         break;
     }
 
     this->getRFBOpsType();
     this->opsThreadTimer.start(1);
-
 }
 
 void rfbclientcls::newUpdateRFBFB()
@@ -144,46 +133,45 @@ void rfbclientcls::newUpdateRFBFB()
     qint64 bppSize;
     quint64 totalPixelSize;
     quint32 cursorSize;
-
     unsigned char *pixelData;
     unsigned char *cursorData;
-
     unsigned char *px;
     unsigned char *p;
     QImage srcImg;
 
-
     //get the padding
-    if (this->readFromRFBServer(&padding,1) != 1)
+    if (this->readFromRFBServer(&padding, 1) != 1) {
         return;
+    }
 
     //get number of rectangle
-    if (this->readFromRFBServer((unsigned char*)&totalRects,2) != 2)
+    if (this->readFromRFBServer((unsigned char *)&totalRects, 2) != 2) {
         return;
+    }
+
     totalRects = this->swap16(totalRects);
 
     //process each rect
-    for (currentRect = 0; currentRect < totalRects; currentRect++)
-    {
+    for (currentRect = 0; currentRect < totalRects; currentRect++) {
         //process all events;
         qApp->processEvents();
 
-        switch (this->socketMode)
-        {
+        switch (this->socketMode) {
         case 0:
-            if (this->vncClientTCP.state() != QTcpSocket::ConnectedState)
+            if (this->vncClientTCP.state() != QTcpSocket::ConnectedState) {
                 return;
+            }
+
             break;
 
         case 1:
-            if (this->vncClientIPC.state() != QLocalSocket::ConnectedState)
+            if (this->vncClientIPC.state() != QLocalSocket::ConnectedState) {
                 return;
+            }
         }
 
         //get rect information
-        if (this->readFromRFBServer((unsigned char*)&rfbRH,sizeof(rfbRH)) == sizeof(rfbRH))
-        {
-
+        if (this->readFromRFBServer((unsigned char *)&rfbRH, sizeof(rfbRH)) == sizeof(rfbRH)) {
             //swap the value
             rfbRH.x = swap16(rfbRH.x);
             rfbRH.y = swap16(rfbRH.y);
@@ -191,97 +179,97 @@ void rfbclientcls::newUpdateRFBFB()
             rfbRH.height = swap16(rfbRH.height);
             rfbRH.encoding = swap32(rfbRH.encoding);
 
-            if (rfbRH.width * rfbRH.height > 0)
-            {
+            if (rfbRH.width * rfbRH.height > 0) {
+                switch (rfbRH.encoding) {
+                case 0: //Get Raw Data
+                    //Get Pixel Size
+                    bppSize = (this->serverPixelF.bpp >> 3);
+                    totalPixelSize = rfbRH.width * rfbRH.height * bppSize;
+                    //create pixel buffer
+                    pixelData = (unsigned char *)malloc(totalPixelSize);
 
-                switch (rfbRH.encoding)
-                {
-                    case 0: //Get Raw Data
-                        //Get Pixel Size
-                        bppSize = (this->serverPixelF.bpp >> 3);
-                        totalPixelSize = rfbRH.width * rfbRH.height * bppSize;
+                    if (this->readFromRFBServer(pixelData, totalPixelSize) == totalPixelSize) {
+                        //create new image
+                        px = 0;
+                        p = 0;
+                        srcImg = QImage(rfbRH.width, rfbRH.height, QImage::Format_RGB888);
+                        px = pixelData;
+                        p = (unsigned char *)srcImg.bits();
 
-                        //create pixel buffer
-                        pixelData = (unsigned char*)malloc(totalPixelSize);
-                        if (this->readFromRFBServer(pixelData,totalPixelSize) == totalPixelSize)
-                        {
-                            //create new image
-                            px = 0;
-                            p = 0;
-                            srcImg = QImage(rfbRH.width,rfbRH.height,QImage::Format_RGB888);
+                        for (int cy = 0; cy < rfbRH.height; cy++) {
+                            qApp->processEvents();
 
-                            px = pixelData;
-                            p = (unsigned char*)srcImg.bits();
-                            for (int cy = 0; cy < rfbRH.height; cy++)
-                            {
-                                qApp->processEvents();
-                                for (int cx = 0; cx < rfbRH.width; cx++)
-                                {
-                                    p[0]    = px[2];
-                                    p[1]    = px[1];
-                                    p[2]    = px[0];
-                                    px+=4;
-                                    p+=3;
-                                }
+                            for (int cx = 0; cx < rfbRH.width; cx++) {
+                                p[0]    = px[2];
+                                p[1]    = px[1];
+                                p[2]    = px[0];
+                                px += 4;
+                                p += 3;
                             }
-
-                            //update image raster
-                            QPainter painter(&this->VNCIMAGE);
-                            painter.drawImage(rfbRH.x,rfbRH.y,srcImg);
-                            painter.end();
                         }
-                        //clear pixel data
-                        free (pixelData);
-                        break;
 
+                        //update image raster
+                        QPainter painter(&this->VNCIMAGE);
+                        painter.drawImage(rfbRH.x, rfbRH.y, srcImg);
+                        painter.end();
+                    }
 
-                    case -223: //this->updateFBGetDesktopSizePseudo();
-                        this->VNCIMAGE = QImage(rfbRH.width,rfbRH.height,QImage::Format_RGB888);
-                        this->serverFBHeight = rfbRH.height;
-                        this->serverFBWidth = rfbRH.width;
-                        emit this->rfbResizeSignal(rfbRH.width,rfbRH.height,this->serverVNCName);
-                        break;
+                    //clear pixel data
+                    free(pixelData);
+                    break;
 
+                case -223: //this->updateFBGetDesktopSizePseudo();
+                    this->VNCIMAGE = QImage(rfbRH.width, rfbRH.height, QImage::Format_RGB888);
+                    this->serverFBHeight = rfbRH.height;
+                    this->serverFBWidth = rfbRH.width;
+                    emit this->rfbResizeSignal(rfbRH.width, rfbRH.height, this->serverVNCName);
+                    break;
 
-                    case -239://this->updateFBGetCursorPseudo();
+                case -239://this->updateFBGetCursorPseudo();
+                    cursorSize = rfbRH.width * rfbRH.height;
 
-                        cursorSize = rfbRH.width * rfbRH.height;
-                        if (cursorSize > 0)
+                    if (cursorSize > 0) {
+                        cursorData = (unsigned char *)malloc(cursorSize);
+
+                        if (this->readFromRFBServer(cursorData, cursorSize) == cursorSize)
+                            //emit this->rfbCursorPositionSignal(rfbRH.x,rfbRH.y);
                         {
-                            cursorData = (unsigned char *)malloc(cursorSize);
-                            if (this->readFromRFBServer(cursorData,cursorSize) == cursorSize)
-                                //emit this->rfbCursorPositionSignal(rfbRH.x,rfbRH.y);
                             free(cursorData);
                         }
-                        break;
+                    }
+
+                    break;
                 }
             }
         }
+
         //process next rectangle
     }
 
     //if all good then display the image
-    if ((currentRect >= totalRects) && (!this->pauseMode))
+    if ((currentRect >= totalRects) && (!this->pauseMode)) {
         emit this->rfbFrameBufferUpdateSignal();
-
+    }
 }
 
 void rfbclientcls::getRFBOpsType()
 {
     unsigned char msgType;
 
-
-    if (this->readFromRFBServer((unsigned char*)&msgType,1) != 1)
+    if (this->readFromRFBServer((unsigned char *)&msgType, 1) != 1) {
         return;
-
-    switch (msgType)
-    {
-        case 0: this->newUpdateRFBFB();break;
-        //case 0: this->RFBOpsStage = 1;break; //framebufferupdate
-       // case 1: this->RFBOpsStage = 2;break; //setcolormapentries
-       // case 2: this->RFBOpsStage = 3; break; //ServerBell
-      //  case 3: this->RFBOpsStage = 4; break; //server cut text
     }
+
+    switch (msgType) {
+    case 0:
+        this->newUpdateRFBFB();
+        break;
+        //case 0: this->RFBOpsStage = 1;break; //framebufferupdate
+        // case 1: this->RFBOpsStage = 2;break; //setcolormapentries
+        // case 2: this->RFBOpsStage = 3; break; //ServerBell
+        //  case 3: this->RFBOpsStage = 4; break; //server cut text
+    }
+
     return;
 }
 
@@ -325,32 +313,32 @@ void rfbclientcls::updateFBGetCursorPseudo()
 quint64 rfbclientcls::readFromRFBServer(unsigned char *data, quint64 size)
 {
     //qint64 bSize;
-    while(1)
-    {
+    while (1) {
         qApp->processEvents();
-        switch (this->socketMode)
-        {
-            case 0:
-            if (this->vncClientTCP.state() != QTcpSocket::ConnectedState)
-                return 0;
 
-            if ((quint64)this->vncClientTCP.bytesAvailable() >= size)
-            {
-                this->vncClientTCP.read((char*)data,(qint64)size);
+        switch (this->socketMode) {
+        case 0:
+            if (this->vncClientTCP.state() != QTcpSocket::ConnectedState) {
+                return 0;
+            }
+
+            if ((quint64)this->vncClientTCP.bytesAvailable() >= size) {
+                this->vncClientTCP.read((char *)data, (qint64)size);
                 return size;
             }
+
             break;
 
-
-            case 1:
-            if (this->vncClientIPC.state() != QLocalSocket::ConnectedState)
+        case 1:
+            if (this->vncClientIPC.state() != QLocalSocket::ConnectedState) {
                 return 0;
+            }
 
-            if ((quint64)this->vncClientIPC.bytesAvailable() >= size)
-            {
-                this->vncClientIPC.read((char*)data,(qint64)size);
+            if ((quint64)this->vncClientIPC.bytesAvailable() >= size) {
+                this->vncClientIPC.read((char *)data, (qint64)size);
                 return size;
             }
+
             break;
         }
     }
@@ -368,11 +356,9 @@ bool rfbclientcls::pauseRFB()
 {
     this->pauseMode = true;
     //make image black in white
-
     this->pauseResumeImg = this->VNCIMAGE;
     this->VNCIMAGE = this->VNCIMAGE.convertToFormat(QImage::Format_Mono);
     this->disconnectFromHost();
-
     emit this->rfbPauseSignal();
     return true;
 }
@@ -382,27 +368,26 @@ bool rfbclientcls::resumeRFB()
     this->VNCIMAGE = this->pauseResumeImg;//this->VNCIMAGE.convertToFormat(QImage::Format_RGB888);
     this->pauseMode = false;
     return true;
-    switch(socketMode)
-    {
-    case 0:
-         if (this->connectToHostTCP(this->serverName,this->serverPort))
-         {
-            this->pauseMode = false;
-            return true;
-         }
-         break;
 
-    case 1:
-        if (this->connectToHostIPC(this->serverName))
-        {
+    switch (socketMode) {
+    case 0:
+        if (this->connectToHostTCP(this->serverName, this->serverPort)) {
             this->pauseMode = false;
             return true;
         }
+
         break;
 
-    }
-    return false;
+    case 1:
+        if (this->connectToHostIPC(this->serverName)) {
+            this->pauseMode = false;
+            return true;
+        }
 
+        break;
+    }
+
+    return false;
     /*if (this->serverConnected)
     {
         this->sendClientFrameBufferRequestUpdate(0,0,this->VNCIMAGE.width(),this->VNCIMAGE.height(),0);
@@ -410,39 +395,36 @@ bool rfbclientcls::resumeRFB()
         return true;
     }
     return false;*/
-
 }
 
 qint32 rfbclientcls::getColorFormat(pixelFormatStruct *pixel)
 {
-   // qDebug() << "   check color format for following parameter:";
-   // qDebug() << "   ... - BPP = " << pixel->bpp << ", Depth = " << pixel->depth << ", True color = " << pixel->true_color_flag;
-   // qDebug() << "   ... - Red max = " << pixel->red_max << ", Green max = " << pixel->green_max << ", Blue max = " << pixel->blue_max;
-   // qDebug() << "   ... - Red shift = " << pixel->red_shift << ", Green shift = " << pixel->green_shift << ", Blue shift = " << pixel->blue_shift;
-
+    // qDebug() << "   check color format for following parameter:";
+    // qDebug() << "   ... - BPP = " << pixel->bpp << ", Depth = " << pixel->depth << ", True color = " << pixel->true_color_flag;
+    // qDebug() << "   ... - Red max = " << pixel->red_max << ", Green max = " << pixel->green_max << ", Blue max = " << pixel->blue_max;
+    // qDebug() << "   ... - Red shift = " << pixel->red_shift << ", Green shift = " << pixel->green_shift << ", Blue shift = " << pixel->blue_shift;
     if (pixel->bpp       == 32   && pixel->depth       == 24   && pixel->true_color_flag == 1    &&
-        pixel->red_max   == 0xFF && pixel->green_max   == 0xFF && pixel->blue_max   == 0xFF &&
-        pixel->red_shift == 0x10 && pixel->green_shift == 0x08 && pixel->blue_shift == 0x00) {
-       // qDebug() << "   color format identified as RGB888";
+            pixel->red_max   == 0xFF && pixel->green_max   == 0xFF && pixel->blue_max   == 0xFF &&
+            pixel->red_shift == 0x10 && pixel->green_shift == 0x08 && pixel->blue_shift == 0x00) {
+        // qDebug() << "   color format identified as RGB888";
         return PIXEL_FORMAT_RGB_888;
     }
 
     if (pixel->bpp       == 16   && pixel->depth       == 16   && pixel->true_color_flag == 1    &&
-        pixel->red_max   == 0x1F && pixel->green_max   == 0x3F && pixel->blue_max   == 0x1F &&
-        pixel->red_shift == 0x0B && pixel->green_shift == 0x05 && pixel->blue_shift == 0x00) {
-       // qDebug() << "   color format identified as RGB565";
+            pixel->red_max   == 0x1F && pixel->green_max   == 0x3F && pixel->blue_max   == 0x1F &&
+            pixel->red_shift == 0x0B && pixel->green_shift == 0x05 && pixel->blue_shift == 0x00) {
+        // qDebug() << "   color format identified as RGB565";
         return PIXEL_FORMAT_RGB_565;
     }
 
     if (pixel->bpp       == 16   && pixel->depth       == 15   && pixel->true_color_flag == 1    &&
-        pixel->red_max   == 0x1F && pixel->green_max   == 0x1F && pixel->blue_max   == 0x1F &&
-        pixel->red_shift == 0x0A && pixel->green_shift == 0x05 && pixel->blue_shift == 0x00) {
-      //  qDebug()<< "   color format identified as RGB555";
+            pixel->red_max   == 0x1F && pixel->green_max   == 0x1F && pixel->blue_max   == 0x1F &&
+            pixel->red_shift == 0x0A && pixel->green_shift == 0x05 && pixel->blue_shift == 0x00) {
+        //  qDebug()<< "   color format identified as RGB555";
         return PIXEL_FORMAT_RGB_555;
     }
 
     qDebug() << "   ERROR - unknown Color format";
-
     return PIXEL_FORMAT_NONE;
 }
 
@@ -450,20 +432,18 @@ void rfbclientcls::vncSockDisconnectedSlot()
 {
     this->disconnectFromHost();
     return;
-
 }
 
 bool rfbclientcls::connectToHostTCP(QString server, qint16 port)
 {
     this->socketMode = 0;
-    return this->connectToHost(server,port);
-
+    return this->connectToHost(server, port);
 }
 
 bool rfbclientcls::connectToHostIPC(QString server)
 {
     this->socketMode = 1;
-    return this->connectToHost(server,0);
+    return this->connectToHost(server, 0);
 }
 
 bool rfbclientcls::connectToHost(QString server, qint16 port)
@@ -471,43 +451,40 @@ bool rfbclientcls::connectToHost(QString server, qint16 port)
     this->serverName = server;
     this->serverPort = port;
     QFile sf;
-
     this->opsThreadTimer.stop();
-    disconnect(&this->opsThreadTimer,SIGNAL(timeout()),this,SLOT(opsThreadTimerTimeOutSlot()));
-
-    disconnect(&this->vncClientTCP,SIGNAL(disconnected()),this,SLOT(vncSockDisconnectedSlot()));
+    disconnect(&this->opsThreadTimer, SIGNAL(timeout()), this, SLOT(opsThreadTimerTimeOutSlot()));
+    disconnect(&this->vncClientTCP, SIGNAL(disconnected()), this, SLOT(vncSockDisconnectedSlot()));
     this->vncClientTCP.abort();
-
-    disconnect(&this->vncClientIPC,SIGNAL(disconnected()),this,SLOT(vncSockDisconnectedSlot()));
+    disconnect(&this->vncClientIPC, SIGNAL(disconnected()), this, SLOT(vncSockDisconnectedSlot()));
     this->vncClientIPC.abort();
 
     //restart fresh
-    switch (this->socketMode){
-
+    switch (this->socketMode) {
     case 0:
-        connect(&this->vncClientTCP,SIGNAL(disconnected()),this,SLOT(vncSockDisconnectedSlot()));
-        this->vncClientTCP.connectToHost(server,port);
-        if (!this->vncClientTCP.waitForConnected(3000))
-        {
+        connect(&this->vncClientTCP, SIGNAL(disconnected()), this, SLOT(vncSockDisconnectedSlot()));
+        this->vncClientTCP.connectToHost(server, port);
+
+        if (!this->vncClientTCP.waitForConnected(3000)) {
             qDebug() << "rfbclientcls: fail to connect to host." << this->vncClientTCP.errorString();
             this->disconnectFromHost();
             return false;
         }
+
         break;
 
     case 1:
-
         //check if local server IPC file exists
         sf.setFileName(server);
-        if (!sf.exists())
-        {
+
+        if (!sf.exists()) {
             qDebug() << "VNC Connect: IPC Server not exists! Exiting";
             return false;
         }
-        connect(&this->vncClientIPC,SIGNAL(disconnected()),this,SLOT(vncSockDisconnectedSlot()));
+
+        connect(&this->vncClientIPC, SIGNAL(disconnected()), this, SLOT(vncSockDisconnectedSlot()));
         this->vncClientIPC.connectToServer(server);
-        if (!this->vncClientIPC.waitForConnected(3000))
-        {
+
+        if (!this->vncClientIPC.waitForConnected(3000)) {
             qDebug() << "rfbclientcls: fail to connect to host." << this->vncClientTCP.errorString();
             this->disconnectFromHost();
             return false;
@@ -517,66 +494,64 @@ bool rfbclientcls::connectToHost(QString server, qint16 port)
     qDebug("vnc sock connected");
     this->serverConnected = true;
     this->pauseMode = false;
-
     emit this->rfbHostConnectedSignal();
-    if (!this->performHandshakingProtocol())
-    {
+
+    if (!this->performHandshakingProtocol()) {
         this->disconnectFromHost();
         return false;
     }
 
     qDebug() << "Timer start";
     this->opsThreadTimer.setSingleShot(true);
-    connect(&this->opsThreadTimer,SIGNAL(timeout()),this,SLOT(opsThreadTimerTimeOutSlot()),Qt::DirectConnection);
+    connect(&this->opsThreadTimer, SIGNAL(timeout()), this, SLOT(opsThreadTimerTimeOutSlot()), Qt::DirectConnection);
     this->opsThreadTimer.start(1);
     return true;
-
 }
 
 void rfbclientcls::disconnectFromHost()
 {
-    qint16 w,h;
-
+    qint16 w, h;
     this->opsThreadTimer.stop();
-    disconnect(&this->opsThreadTimer,SIGNAL(timeout()),this,SLOT(opsThreadTimerTimeOutSlot()));
-
-
-    disconnect(&this->vncClientTCP,SIGNAL(disconnected()),this,SLOT(vncSockDisconnectedSlot()));
+    disconnect(&this->opsThreadTimer, SIGNAL(timeout()), this, SLOT(opsThreadTimerTimeOutSlot()));
+    disconnect(&this->vncClientTCP, SIGNAL(disconnected()), this, SLOT(vncSockDisconnectedSlot()));
     this->vncClientTCP.abort();
-
-    disconnect(&this->vncClientIPC,SIGNAL(disconnected()),this,SLOT(vncSockDisconnectedSlot()));
+    disconnect(&this->vncClientIPC, SIGNAL(disconnected()), this, SLOT(vncSockDisconnectedSlot()));
     this->vncClientIPC.abort();
+    qDebug("sock disconnected");
+    this->serverConnected = false;
 
-     qDebug("sock disconnected");
-     this->serverConnected = false;
-
-     if (!this->pauseMode)
-     {
+    if (!this->pauseMode) {
         //if disconnection request is not from pause
         this->VNCIMAGE = QImage(":/new/prefix1/creditimg.png");
         w = this->VNCIMAGE.width();
         h = this->VNCIMAGE.height();
-        emit this->rfbResizeSignal(w,h,"");
-     }
+        emit this->rfbResizeSignal(w, h, "");
+    }
 
-     //if disconnect request from pause.
-     //then reset the pause
-     this->pauseMode = false;
-
-     emit this->rfbHostDisconnectedSignal();
+    //if disconnect request from pause.
+    //then reset the pause
+    this->pauseMode = false;
+    emit this->rfbHostDisconnectedSignal();
 }
 
 
 bool rfbclientcls::performHandshakingProtocol()
 {
-    if (!this->handleVersionProtocol())
+    if (!this->handleVersionProtocol()) {
         return false;
-    if (!this->handleSecurityProtocol())
+    }
+
+    if (!this->handleSecurityProtocol()) {
         return false;
-    if (!this->handleClientInitProtocol())
+    }
+
+    if (!this->handleClientInitProtocol()) {
         return false;
-    if (!this->handleServerInitProtocol())
+    }
+
+    if (!this->handleServerInitProtocol()) {
         return false;
+    }
 
     return true;
 }
@@ -585,51 +560,58 @@ bool rfbclientcls::handleVersionProtocol()
 {
     unsigned char vncServerData[12];
     QString enc;
-
-
-
     qDebug("Handling version protocol");
     //step 1. Get the version protocol from server
 
-    if (this->readFromHost((unsigned char*)vncServerData,12) != 12) {
+    if (this->readFromHost((unsigned char *)vncServerData, 12) != 12) {
         qWarning() << "couldn't read enough";
         return false;
     }
-    qDebug() << "Got version stuff";
 
+    qDebug() << "Got version stuff";
     enc.clear();
     this->serverMajorVersion = enc.append((QChar)vncServerData[6]).toInt();
-
     enc.clear();
     this->serverMinorVersion = enc.append((QChar)vncServerData[10]).toInt();
-
-    qDebug("   server version %d.%d",serverMajorVersion,serverMinorVersion);
-
+    qDebug("   server version %d.%d", serverMajorVersion, serverMinorVersion);
     //client to server
     enc.clear();
     this->clientMinorVersion = 0;
-    if (this->serverMajorVersion >= 3)
-    {
+
+    if (this->serverMajorVersion >= 3) {
         this->clientMajorVersion = 3;
-        switch (this->serverMinorVersion)
-        {
-            case 3: this->clientMinorVersion = 3; enc.append("RFB 003.003\n");break;
-            case 7: this->clientMinorVersion = 7; enc.append("RFB 003.007\n");break;
-            case 8: this->clientMinorVersion = 8; enc.append("RFB 003.008\n");break;
+
+        switch (this->serverMinorVersion) {
+        case 3:
+            this->clientMinorVersion = 3;
+            enc.append("RFB 003.003\n");
+            break;
+
+        case 7:
+            this->clientMinorVersion = 7;
+            enc.append("RFB 003.007\n");
+            break;
+
+        case 8:
+            this->clientMinorVersion = 8;
+            enc.append("RFB 003.008\n");
+            break;
         }
     }
 
-    if (this->clientMinorVersion == 0)
+    if (this->clientMinorVersion == 0) {
         return false;
+    }
 
     //test
     //enc.clear();
     //enc.append("RFB 004.000\n");
     //send data to server
-    qint32 writers = this->writeToHost((unsigned char*)enc.toStdString().c_str(),12);
+    qint32 writers = this->writeToHost((unsigned char *)enc.toStdString().c_str(), 12);
 
-    if (writers == 12)
+    if (writers == 12) {
         return true;
+    }
 
     return false;
 }
@@ -639,45 +621,52 @@ bool rfbclientcls::handleSecurityProtocol()
     unsigned char vncServerData[20];
     unsigned char vncClientData[10];
     QString enc;
-
     qDebug("Handling security protocol");
 
     //step 1. Get the version protocol from server
 
-    if (this->readFromHost(vncServerData,2) != 2)
+    if (this->readFromHost(vncServerData, 2) != 2) {
         return false;
-
+    }
 
     qint8 numberOfSecurity = 0;
     qint8 securityID = vncServerData[1];
-
     numberOfSecurity = vncServerData[0];
     numberOfSecurity = numberOfSecurity;
     //get security info
     //qDebug() << "   number of security " << numberOfSecurity;
     //qDebug() << "   security id" << securityID;
 
-    switch (securityID)
-    {
-        //no security
-        case 0x01:vncClientData[0] = 0x01;qDebug("   Server requires no security");break;
-        case 0x02:qDebug("   Requires VNC authentication");break;
-        default:qDebug("   unknown security id (%d)",vncServerData[1]);
+    switch (securityID) {
+    //no security
+    case 0x01:
+        vncClientData[0] = 0x01;
+        qDebug("   Server requires no security");
+        break;
+
+    case 0x02:
+        qDebug("   Requires VNC authentication");
+        break;
+
+    default:
+        qDebug("   unknown security id (%d)", vncServerData[1]);
     }
 
     //send to server for security cleareance
     qDebug("    requesting no security option");
-    if (this->writeToHost((unsigned char*)vncClientData,1) != 1)
+
+    if (this->writeToHost((unsigned char *)vncClientData, 1) != 1) {
         return false;
+    }
 
     qDebug("   waiting for security clearence");
     //wait for server acknowledgement
 
-    if (this->readFromHost((unsigned char*)vncServerData,4) != 4)
+    if (this->readFromHost((unsigned char *)vncServerData, 4) != 4) {
         return false;
+    }
 
-    if (enc.fromLocal8Bit((char *)vncServerData,4).toInt() == 0)
-    {
+    if (enc.fromLocal8Bit((char *)vncServerData, 4).toInt() == 0) {
         qDebug("    security pass");
         return true;
     }
@@ -689,16 +678,14 @@ bool rfbclientcls::handleSecurityProtocol()
 bool rfbclientcls::handleClientInitProtocol()
 {
     QString vncClientData;
-
-
     qDebug("Handling Client Init Protocol");
-
-
     vncClientData.clear();
     vncClientData.append("\x01");
     qDebug("   writing server a share flag");
-    if (this->writeToHost((unsigned char*)vncClientData.toStdString().c_str(),1) != 1)
+
+    if (this->writeToHost((unsigned char *)vncClientData.toStdString().c_str(), 1) != 1) {
         return false;
+    }
 
     return true;
 }
@@ -708,13 +695,11 @@ bool rfbclientcls::handleServerInitProtocol()
     rfbServerInitStruct rfbSID;
     unsigned char *serverName = 0;
     //unsigned char vncServerData[26];
-
-
     qDebug("Handling Server Init Protocol");
 
-
-    if (this->readFromHost((unsigned char*)&rfbSID,sizeof(rfbSID)) != sizeof(rfbSID))
+    if (this->readFromHost((unsigned char *)&rfbSID, sizeof(rfbSID)) != sizeof(rfbSID)) {
         return false;
+    }
 
     rfbSID.fbWidth = swap16(rfbSID.fbWidth);
     rfbSID.fbHeight = swap16(rfbSID.fbHeight);
@@ -722,82 +707,75 @@ bool rfbclientcls::handleServerInitProtocol()
     rfbSID.fbPixel.green_max = swap16(rfbSID.fbPixel.green_max);
     rfbSID.fbPixel.blue_max = swap16(rfbSID.fbPixel.blue_max);
     rfbSID.fbNameLength = swap32(rfbSID.fbNameLength);
-
-
     //set server frame buffer information
     qDebug("   setting server frame buffer information");
     qDebug() << "Height" << rfbSID.fbHeight;
     qDebug() << "Width" << rfbSID.fbWidth;
     //qDebug() << "pixel" << rfbSID.fbPixel.;
-
     this->serverFBHeight = rfbSID.fbHeight;
     this->serverFBWidth = rfbSID.fbWidth;
     this->serverPixelF = rfbSID.fbPixel;
     this->serverColorFormat = this->getColorFormat(&this->serverPixelF);
-
-
     //read server name
-    serverName = (unsigned char*)malloc(rfbSID.fbNameLength+1);
+    serverName = (unsigned char *)malloc(rfbSID.fbNameLength + 1);
     qDebug() << "   reading server name for" << rfbSID.fbNameLength;
-    if (this->readFromHost(serverName,rfbSID.fbNameLength) != rfbSID.fbNameLength)
-        return false;
-    serverName[rfbSID.fbNameLength] = 0x00;
-    this->serverVNCName = QString((char*)serverName).trimmed();
 
+    if (this->readFromHost(serverName, rfbSID.fbNameLength) != rfbSID.fbNameLength) {
+        return false;
+    }
+
+    serverName[rfbSID.fbNameLength] = 0x00;
+    this->serverVNCName = QString((char *)serverName).trimmed();
     //create a new VNC Image;
-    this->VNCIMAGE = QImage(rfbSID.fbWidth,rfbSID.fbHeight,QImage::Format_RGB888);
+    this->VNCIMAGE = QImage(rfbSID.fbWidth, rfbSID.fbHeight, QImage::Format_RGB888);
     this->serverFBHeight = rfbSID.fbHeight;
     this->serverFBWidth = rfbSID.fbWidth;
-    emit this->rfbResizeSignal(rfbSID.fbWidth,rfbSID.fbHeight,this->serverVNCName);
-
+    emit this->rfbResizeSignal(rfbSID.fbWidth, rfbSID.fbHeight, this->serverVNCName);
     //this->updateFBGetDesktopSizePseudo(rfbSID.fbWidth,rfbSID.fbHeight);
-
     qDebug("SERVER NAME IS %s", this->serverVNCName.toStdString().c_str());
-
-    free (serverName);
+    free(serverName);
 
     //create vncImage
     //qDebug("   Creating new RFB Image QImage RGB888");
     //this->VNCIMAGE = QImage(this->serverFBWidth,this->serverFBHeight,QImage::Format_RGB888);
 
     //check if serverColorFormat == clientColorFormat
-    if (this->serverColorFormat != this->clientColorFormat)
-    {
+    if (this->serverColorFormat != this->clientColorFormat) {
         //set server color format
         qDebug("   Resetting server pixel format");
-        if(!this->sendClientSetPixelFormat(this->clientPixelF))
+
+        if (!this->sendClientSetPixelFormat(this->clientPixelF)) {
             return false;
+        }
     }
 
     //encodings
-    if (!this->sendClientSetEncodings(0)) //raw
+    if (!this->sendClientSetEncodings(0)) { //raw
         return false;
+    }
 
-    if (!this->sendClientSetEncodings(-239)) //cursor pseudo
+    if (!this->sendClientSetEncodings(-239)) { //cursor pseudo
         return false;
+    }
 
-    if (!this->sendClientSetEncodings(-223)) //desktopsize pseudo
+    if (!this->sendClientSetEncodings(-223)) { //desktopsize pseudo
         return false;
-
-
+    }
 
     //qDebug("   emiting resize at %d x %d",rfbSID.fbWidth,rfbSID.fbHeight);
     //qDebug("name length is %d",rfbSID.fbNameLength);
     //qDebug("server name is %s",QString(vncServerData.mid(24,rfbSID.fbNameLength)).toStdString().c_str());
-
-    return this->sendClientFrameBufferRequestUpdate(0,0,rfbSID.fbWidth,rfbSID.fbHeight,0);
-
+    return this->sendClientFrameBufferRequestUpdate(0, 0, rfbSID.fbWidth, rfbSID.fbHeight, 0);
     return true;
 }
 
 
 bool rfbclientcls::sendClientFrameBufferRequestUpdate(int x, int y, int width, int height, int incremental)
 {
-
     unsigned char vncClientData[10];
     char inc = 0x01;
-    if (incremental == 0)
-    {
+
+    if (incremental == 0) {
         //qDebug("frame request is not incremental");
         inc = 0x00;
     }
@@ -813,9 +791,7 @@ bool rfbclientcls::sendClientFrameBufferRequestUpdate(int x, int y, int width, i
     vncClientData[8]  = (height >> 8) & 0xFF;
     vncClientData[9]  = (height >> 0) & 0xFF;
 
-
-    if (this->writeToHost(vncClientData,10) != 10)
-    {
+    if (this->writeToHost(vncClientData, 10) != 10) {
         qDebug("   fail to write request update");
         return false;
     }
@@ -826,33 +802,25 @@ bool rfbclientcls::sendClientFrameBufferRequestUpdate(int x, int y, int width, i
 
 bool rfbclientcls::sendClientSetEncodings(qint32 encID)
 {
-
     SET_ENCODING_STRUCT enc;
     qint32 encType;
-
-
     enc.msgType = 2;
     enc.padding = 2;
     enc.numOfEncodings = 1; //numofencoding in LE
     enc.numOfEncodings = swap16(enc.numOfEncodings); //numofencoding in BE
     enc.encoding = swap32(encID);
 
-
-
-
-    if (this->writeToHost((unsigned char*)&enc,8) != 8)
-    {
+    if (this->writeToHost((unsigned char *)&enc, 8) != 8) {
         qDebug("   fail to set encoding");
         return false;
     }
 
     return true;
-
     //send raw encoding
     encType = 0;
     encType = swap32(encType);
-    if (this->writeToHost((unsigned char*)&encType,4) != 4)
-    {
+
+    if (this->writeToHost((unsigned char *)&encType, 4) != 4) {
         qDebug("   fail to set encoding");
         return false;
     }
@@ -860,21 +828,18 @@ bool rfbclientcls::sendClientSetEncodings(qint32 encID)
     //send desktop resize
     encType = -223;
     encType = swap32(encType);
-    if (this->writeToHost((unsigned char*)&encType,4) != 4)
-    {
+
+    if (this->writeToHost((unsigned char *)&encType, 4) != 4) {
         qDebug("   fail to set encoding");
         return false;
     }
 
     return true;
-
-
 }
 
 bool rfbclientcls::sendClientSetPixelFormat(pixelFormatStruct pixel)
 {
     unsigned char vncClientData[20];
-
     vncClientData[0] = 0; //message type
     vncClientData[1] = 0x00;
     vncClientData[2] = 0x00;
@@ -896,8 +861,7 @@ bool rfbclientcls::sendClientSetPixelFormat(pixelFormatStruct pixel)
     vncClientData[18] = 0x00;
     vncClientData[19] = 0x00;
 
-    if (this->writeToHost(vncClientData,20) != 20)
-    {
+    if (this->writeToHost(vncClientData, 20) != 20) {
         qDebug("   fail to set pixel format");
         return false;
     }
@@ -918,7 +882,6 @@ quint16 rfbclientcls::swap16(quint16 src)
     char *srcX = (char *)&src;
     tgtX[0] = srcX[1];
     tgtX[1] = srcX[0];
-
     return tgt;
 }
 
@@ -929,7 +892,6 @@ qint16 rfbclientcls::swap16(qint16 src)
     char *srcX = (char *)&src;
     tgtX[0] = srcX[1];
     tgtX[1] = srcX[0];
-
     return tgt;
 }
 
@@ -938,12 +900,10 @@ quint32 rfbclientcls::swap32(quint32 src)
     quint32 tgt;
     char *tgtX = (char *)&tgt;
     char *srcX = (char *)&src;
-
     tgtX[0] = srcX[3];
     tgtX[1] = srcX[2];
     tgtX[2] = srcX[1];
     tgtX[3] = srcX[0];
-
     return tgt;
 }
 
@@ -952,12 +912,10 @@ qint32 rfbclientcls::swap32(qint32 src)
     qint32 tgt;
     char *tgtX = (char *)&tgt;
     char *srcX = (char *)&src;
-
     tgtX[0] = srcX[3];
     tgtX[1] = srcX[2];
     tgtX[2] = srcX[1];
     tgtX[3] = srcX[0];
-
     return tgt;
 }
 
@@ -965,18 +923,23 @@ qint64 rfbclientcls::writeToHost(unsigned char *src, qint64 size)
 {
     qint64 rs = 0;
 
-    switch (this->socketMode)
-    {
+    switch (this->socketMode) {
     case 0:
-        rs = this->vncClientTCP.write((char*)src,size);
-        if (!this->vncClientTCP.waitForBytesWritten())
+        rs = this->vncClientTCP.write((char *)src, size);
+
+        if (!this->vncClientTCP.waitForBytesWritten()) {
             return 0;
+        }
+
         break;
 
     case 1:
-        rs = this->vncClientIPC.write((char*)src,size);
-        if (!this->vncClientIPC.waitForBytesWritten())
+        rs = this->vncClientIPC.write((char *)src, size);
+
+        if (!this->vncClientIPC.waitForBytesWritten()) {
             return 0;
+        }
+
         break;
     }
 
@@ -985,68 +948,66 @@ qint64 rfbclientcls::writeToHost(unsigned char *src, qint64 size)
 
 qint64 rfbclientcls::writeToHostNonBlock(unsigned char *src, qint64 size)
 {
-
     qint64 rs = 0;
 
-    switch (this->socketMode)
-    {
+    switch (this->socketMode) {
     case 0:
-        if (this->vncClientTCP.state() == QTcpSocket::ConnectedState)
-                rs = this->vncClientTCP.write((char*)src,size);
+        if (this->vncClientTCP.state() == QTcpSocket::ConnectedState) {
+            rs = this->vncClientTCP.write((char *)src, size);
+        }
+
         break;
 
     case 1:
-        if (this->vncClientIPC.state() == QLocalSocket::ConnectedState)
-                rs = this->vncClientIPC.write((char*)src,size);
+        if (this->vncClientIPC.state() == QLocalSocket::ConnectedState) {
+            rs = this->vncClientIPC.write((char *)src, size);
+        }
+
         break;
     }
 
     return rs;
-
 }
 
 qint64 rfbclientcls::readFromHost(unsigned char *tgt, qint64 size)
 {
-
-    switch (this->socketMode){
-
+    switch (this->socketMode) {
     case 0:
-        if (this->vncClientTCP.state() == QTcpSocket::ConnectedState)
-        {
-            while(1){
-
+        if (this->vncClientTCP.state() == QTcpSocket::ConnectedState) {
+            while (1) {
                 QCoreApplication::processEvents();
-                if (this->vncClientTCP.bytesAvailable() == 0)
-                    this->vncClientTCP.waitForReadyRead(); // wait for data to arrive
 
-                if (this->vncClientTCP.bytesAvailable() >= size){
-                    return this->vncClientTCP.read((char*)tgt,size);
+                if (this->vncClientTCP.bytesAvailable() == 0) {
+                    this->vncClientTCP.waitForReadyRead();    // wait for data to arrive
+                }
+
+                if (this->vncClientTCP.bytesAvailable() >= size) {
+                    return this->vncClientTCP.read((char *)tgt, size);
                 }
             }
         }
+
         break;
 
     case 1:
-        if (this->vncClientIPC.state() == QLocalSocket::ConnectedState)
-        {
-            while(1){
-
+        if (this->vncClientIPC.state() == QLocalSocket::ConnectedState) {
+            while (1) {
                 QCoreApplication::processEvents();
-                if (this->vncClientIPC.bytesAvailable() == 0)
-                    this->vncClientIPC.waitForReadyRead(); // wait for data to arrive
 
-                if (this->vncClientIPC.bytesAvailable() >= size){
-                    return this->vncClientIPC.read((char*)tgt,size);
+                if (this->vncClientIPC.bytesAvailable() == 0) {
+                    this->vncClientIPC.waitForReadyRead();    // wait for data to arrive
+                }
+
+                if (this->vncClientIPC.bytesAvailable() >= size) {
+                    return this->vncClientIPC.read((char *)tgt, size);
                 }
             }
         }
+
         break;
     }
 
     return 0; // disconnected state
-
-
-
     /*switch (this->socketMode)
     {
     case 0:
@@ -1118,55 +1079,52 @@ qint64 rfbclientcls::readFromHost(unsigned char *tgt, qint64 size)
     }
 
     return size;*/
-
 }
 
 
 void rfbclientcls::sendServerPointerEvent(quint16 x, quint16 y, quint8 buttonMask)
 {
-    this->sendClientPointerEvent(x,y,buttonMask);
+    this->sendClientPointerEvent(x, y, buttonMask);
 }
 
 void rfbclientcls::sendClientPointerEvent(quint16 x, quint16 y, quint8 buttonMask)
 {
     SENT_POINTER_EVENT pointer;
 
-    if (!this->serverConnected)
+    if (!this->serverConnected) {
         return;
+    }
 
     pointer.msgType = 0x05;
     pointer.x = swap16(x);
     pointer.y = swap16(y);
     pointer.buttonMask = buttonMask;
-
-    this->writeToHostNonBlock((unsigned char*)&pointer,6);
+    this->writeToHostNonBlock((unsigned char *)&pointer, 6);
     //this->writeToHost((unsigned char*)&pointer,6);
-
 }
 
 void rfbclientcls::sendServerKeyEvent(quint32 pKey, quint8 press, bool modifier)
 {
-    this->sendClientKeyEvent(pKey,press,modifier);
+    this->sendClientKeyEvent(pKey, press, modifier);
 }
 
 void rfbclientcls::sendClientKeyEvent(quint32 pKey, quint8 press, bool modifier)
 {
     SENT_KEY_EVENT clientKey;
 
-    if (!this->serverConnected)
+    if (!this->serverConnected) {
         return;
+    }
 
     clientKey.msgType = 0x04;
     clientKey.padding = 0;
     clientKey.press = press;
-
-    clientKey.keyValue = this->translateRfbKey(pKey,modifier);
+    clientKey.keyValue = this->translateRfbKey(pKey, modifier);
     clientKey.keyValue = swap32(clientKey.keyValue);
-
-    this->writeToHostNonBlock((unsigned char*)&clientKey,8);
+    this->writeToHostNonBlock((unsigned char *)&clientKey, 8);
 }
 
-quint32 rfbclientcls::translateRfbKey(quint32 inkey,bool modifier)
+quint32 rfbclientcls::translateRfbKey(quint32 inkey, bool modifier)
 {
     quint32 k = 5000;
 
@@ -1375,12 +1333,10 @@ quint32 rfbclientcls::translateRfbKey(quint32 inkey,bool modifier)
     }
 
     return k;
-
 }
 
 void rfbclientcls::vncIPCSockErrorSlot(QLocalSocket::LocalSocketError)
 {
-
     //QMessageBox::critical(0,"RFB Error",this->vncClientIPC->errorString());
     this->vncClientIPC.abort();
 }

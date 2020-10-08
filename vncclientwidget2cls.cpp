@@ -32,36 +32,30 @@ vncclientwidget2cls::vncclientwidget2cls(QWidget *parent) :
 {
     QPalette pl;
     this->setAutoFillBackground(true);
-    pl.setColor(QPalette::Background,Qt::black);
+    pl.setColor(QPalette::Background, Qt::black);
     this->setPalette(pl);
-
     this->widgetResizing = false;
     this->rfbWidget.setParent(this);
     this->rfbWidget.hide();
-
-
-    this->setMinimumSize(640,480);
-
-    connect(&this->rfbWidget,SIGNAL(vncFrameResizeSignal()),this,SLOT(vncFrameResizeSlot()));
-    connect(&this->rfbWidget,SIGNAL(rfbClientDisconnectedSignal()),this,SLOT(rfbClientDisconnectedSlot()));
-    connect(&this->rfbWidget,SIGNAL(rfbClientPauseSignal()),this,SLOT(rfbClientPauseSlot()));
-    connect(&this->rfbWidget,SIGNAL(vncGrabIOSIG()),this,SLOT(rfbClientScreenLockSlot()));
-    connect(&this->rfbWidget,SIGNAL(vncUngrabIOSIG()),this,SLOT(rfbClientScreenUnlockSlot()));
-
-    this->rfbWidget.move(0,0);
+    this->setMinimumSize(640, 480);
+    connect(&this->rfbWidget, SIGNAL(vncFrameResizeSignal()), this, SLOT(vncFrameResizeSlot()));
+    connect(&this->rfbWidget, SIGNAL(rfbClientDisconnectedSignal()), this, SLOT(rfbClientDisconnectedSlot()));
+    connect(&this->rfbWidget, SIGNAL(rfbClientPauseSignal()), this, SLOT(rfbClientPauseSlot()));
+    connect(&this->rfbWidget, SIGNAL(vncGrabIOSIG()), this, SLOT(rfbClientScreenLockSlot()));
+    connect(&this->rfbWidget, SIGNAL(vncUngrabIOSIG()), this, SLOT(rfbClientScreenUnlockSlot()));
+    this->rfbWidget.move(0, 0);
     this->rfbWidget.show();
-    this->resize(640,480);
+    this->resize(640, 480);
 }
 
 vncclientwidget2cls::~vncclientwidget2cls()
 {
-
-    disconnect(&this->rfbWidget,SIGNAL(vncFrameResizeSignal()),this,SLOT(vncFrameResizeSlot()));
+    disconnect(&this->rfbWidget, SIGNAL(vncFrameResizeSignal()), this, SLOT(vncFrameResizeSlot()));
     //disconnect(this->rfbWidget,SIGNAL(rfbClientConnectedSignal()),this,SLOT(vncClientConnectedSignal()));
-    disconnect(&this->rfbWidget,SIGNAL(rfbClientDisconnectedSignal()),this,SLOT(rfbClientDisconnectedSlot()));
-    disconnect(&this->rfbWidget,SIGNAL(rfbClientPauseSignal()),this,SLOT(rfbClientPauseSlot()));
-    disconnect(&this->rfbWidget,SIGNAL(vncGrabIOSIG()),this,SLOT(rfbClientScreenLockSlot()));
-    disconnect(&this->rfbWidget,SIGNAL(vncUngrabIOSIG()),this,SLOT(rfbClientScreenUnlockSlot()));
+    disconnect(&this->rfbWidget, SIGNAL(rfbClientDisconnectedSignal()), this, SLOT(rfbClientDisconnectedSlot()));
+    disconnect(&this->rfbWidget, SIGNAL(rfbClientPauseSignal()), this, SLOT(rfbClientPauseSlot()));
+    disconnect(&this->rfbWidget, SIGNAL(vncGrabIOSIG()), this, SLOT(rfbClientScreenLockSlot()));
+    disconnect(&this->rfbWidget, SIGNAL(vncUngrabIOSIG()), this, SLOT(rfbClientScreenUnlockSlot()));
 }
 
 QImage vncclientwidget2cls::getScreenCapture()
@@ -72,14 +66,14 @@ QImage vncclientwidget2cls::getScreenCapture()
 void vncclientwidget2cls::changeEvent(QEvent *E)
 {
     //handle min max
-    if (E->type() == QEvent::WindowStateChange)
-    {
-       QWindowStateChangeEvent* event = static_cast< QWindowStateChangeEvent* >( E);
+    if (E->type() == QEvent::WindowStateChange) {
+        QWindowStateChangeEvent *event = static_cast< QWindowStateChangeEvent * >(E);
 
-       if( event->oldState() & Qt::WindowMinimized )
+        if (event->oldState() & Qt::WindowMinimized) {
             this->updateSize();
-       else if ( event->oldState() == Qt::WindowNoState && this->windowState() == Qt::WindowMaximized )
-            this->updateSize();   
+        } else if (event->oldState() == Qt::WindowNoState && this->windowState() == Qt::WindowMaximized) {
+            this->updateSize();
+        }
     }
 }
 
@@ -91,7 +85,7 @@ bool vncclientwidget2cls::connectVNCIPC(QString server)
 
 bool vncclientwidget2cls::connectVNCTCP(QString server, qint16 port)
 {
-    return this->rfbWidget.connectVNCTCP(server,port);
+    return this->rfbWidget.connectVNCTCP(server, port);
 }
 
 void vncclientwidget2cls::disconnectVNC()
@@ -147,44 +141,44 @@ void vncclientwidget2cls::updateSize()
     this->widgetResizing = true;
 
     //resize width to rfbwidget
-    if (this->geometry().width() < this->rfbWidget.maximumWidth())
-        this->rfbWidget.resize(this->geometry().width(),this->rfbWidget.geometry().height());
+    if (this->geometry().width() < this->rfbWidget.maximumWidth()) {
+        this->rfbWidget.resize(this->geometry().width(), this->rfbWidget.geometry().height());
+    }
 
     //resize width to maximum
-    if (this->geometry().width() >= this->rfbWidget.maximumWidth())
-        this->rfbWidget.resize(this->rfbWidget.maximumWidth(),this->rfbWidget.geometry().height());
+    if (this->geometry().width() >= this->rfbWidget.maximumWidth()) {
+        this->rfbWidget.resize(this->rfbWidget.maximumWidth(), this->rfbWidget.geometry().height());
+    }
 
     //resize height to rfbwidget
-    if (this->geometry().height() < this->rfbWidget.maximumHeight())
-        this->rfbWidget.resize(this->rfbWidget.geometry().width(),this->geometry().height());
+    if (this->geometry().height() < this->rfbWidget.maximumHeight()) {
+        this->rfbWidget.resize(this->rfbWidget.geometry().width(), this->geometry().height());
+    }
 
-    if (this->geometry().height() >= this->rfbWidget.maximumHeight())
-        this->rfbWidget.resize(this->rfbWidget.geometry().width(),this->rfbWidget.maximumHeight());
+    if (this->geometry().height() >= this->rfbWidget.maximumHeight()) {
+        this->rfbWidget.resize(this->rfbWidget.geometry().width(), this->rfbWidget.maximumHeight());
+    }
 
-    if (this->geometry().width() < this->rfbWidget.maximumWidth())
-        this->rfbWidget.move(0,this->rfbWidget.y());
-    else
-    {
+    if (this->geometry().width() < this->rfbWidget.maximumWidth()) {
+        this->rfbWidget.move(0, this->rfbWidget.y());
+    } else {
         //move to center
-        qint32 mX = this->rfbWidget.geometry().width() /2;
-        qint32 rw = this->geometry().width()/2;
+        qint32 mX = this->rfbWidget.geometry().width() / 2;
+        qint32 rw = this->geometry().width() / 2;
         qint32 tgtX = rw - mX;
-        this->rfbWidget.move(tgtX,this->rfbWidget.y());
+        this->rfbWidget.move(tgtX, this->rfbWidget.y());
     }
 
-    if (this->geometry().height() < this->rfbWidget.maximumHeight())
-        this->rfbWidget.move(this->rfbWidget.x(),0);
-    else
-    {
-        qint32 mY = this->rfbWidget.geometry().height()/2;
-        qint32 rh = this->geometry().height()/2;
+    if (this->geometry().height() < this->rfbWidget.maximumHeight()) {
+        this->rfbWidget.move(this->rfbWidget.x(), 0);
+    } else {
+        qint32 mY = this->rfbWidget.geometry().height() / 2;
+        qint32 rh = this->geometry().height() / 2;
         qint32 tgtY = rh - mY;
-        this->rfbWidget.move(this->rfbWidget.x(),tgtY);
+        this->rfbWidget.move(this->rfbWidget.x(), tgtY);
     }
-
 
     this->widgetResizing = false;
-
 }
 
 bool vncclientwidget2cls::setPauseVNC()

@@ -41,8 +41,7 @@
 #include <QMessageBox>
 
 
-struct PIXEL_FORMAT_STRUCT
-{
+struct PIXEL_FORMAT_STRUCT {
     quint8 bpp; //bits per pixel
     quint8 depth;
     quint8 big_endian_flag;
@@ -56,29 +55,25 @@ struct PIXEL_FORMAT_STRUCT
     quint8 padding[3];
 };
 
-struct SET_PIXEL_STRUCT
-{
+struct SET_PIXEL_STRUCT {
     quint8                  msgType;
     quint8                  padding[3];
     PIXEL_FORMAT_STRUCT     pixelFormat;
 };
 
-struct SET_ENCODING_STRUCT
-{
+struct SET_ENCODING_STRUCT {
     quint8                  msgType;
     quint8                  padding;
     quint16                 numOfEncodings;
     qint32                  encoding;
 };
 
-struct RFB_RECTS_HEADER_STRUCT
-{
+struct RFB_RECTS_HEADER_STRUCT {
     unsigned char padding;
     quint16 numOfRectangles;
 };
 
-struct rfbRectHeader
-{
+struct rfbRectHeader {
     quint16 x;
     quint16 y;
     quint16 width;
@@ -86,8 +81,7 @@ struct rfbRectHeader
     qint32  encoding;
 };
 
-struct rfbEncodingStruct
-{
+struct rfbEncodingStruct {
     quint8 msgType;
     quint8 padding;
     quint16 numOfEncodings;
@@ -95,8 +89,7 @@ struct rfbEncodingStruct
     //qint32 enc2;
 };
 
-struct pixelFormatStruct
-{
+struct pixelFormatStruct {
     quint8 bpp; //bits per pixel
     quint8 depth;
     quint8 big_endian_flag;
@@ -110,24 +103,21 @@ struct pixelFormatStruct
     quint8 padding[3];
 };
 
-struct rfbServerInitStruct
-{
-        quint16 fbWidth;
-        quint16 fbHeight;
-        pixelFormatStruct fbPixel;
-        quint32 fbNameLength;
+struct rfbServerInitStruct {
+    quint16 fbWidth;
+    quint16 fbHeight;
+    pixelFormatStruct fbPixel;
+    quint32 fbNameLength;
 };
 
-struct SENT_KEY_EVENT
-{
+struct SENT_KEY_EVENT {
     quint8 msgType;
     quint8 press;
     quint16 padding;
     quint32 keyValue;
 };
 
-struct SENT_POINTER_EVENT
-{
+struct SENT_POINTER_EVENT {
     quint8 msgType;
     quint8 buttonMask;
     quint16 x;
@@ -150,10 +140,10 @@ class rfbclientcls : public QObject
 {
     Q_OBJECT
 public:
-    explicit rfbclientcls (QObject *parent = 0);
+    explicit rfbclientcls(QObject *parent = 0);
     ~rfbclientcls();
 
-    bool connectToHostTCP(QString server, qint16 port=5900);
+    bool connectToHostTCP(QString server, qint16 port = 5900);
     bool connectToHostIPC(QString server);
     void disconnectFromHost();
     bool performHandshakingProtocol();
@@ -183,9 +173,9 @@ private:
     quint32 swap32(quint32 src);
     qint32 swap32(qint32 src);
 
-    qint64 writeToHost(unsigned char*src,qint64 size);
-    qint64 writeToHostNonBlock(unsigned char*src,qint64 size);
-    qint64 readFromHost (unsigned char *tgt, qint64 size);
+    qint64 writeToHost(unsigned char *src, qint64 size);
+    qint64 writeToHostNonBlock(unsigned char *src, qint64 size);
+    qint64 readFromHost(unsigned char *tgt, qint64 size);
     quint8 socketMode;
 
 
@@ -200,7 +190,7 @@ private:
     bool sendClientFrameBufferRequestUpdate(int x, int y, int width, int height, int incremental);
 
     void sendClientKeyEvent(quint32 pKey, quint8 press, bool modifier);
-    quint32 translateRfbKey(quint32 inkey,bool modifier);
+    quint32 translateRfbKey(quint32 inkey, bool modifier);
 
     void sendClientPointerEvent(quint16 x, quint16 y, quint8 buttonMask);
     bool sendClientCutText();
@@ -252,7 +242,7 @@ private:
 
 
 signals:
-    void rfbResizeSignal(qint16 width, qint16 height,QString serverName);
+    void rfbResizeSignal(qint16 width, qint16 height, QString serverName);
     void rfbPauseSignal();
     //void rfbCursorPositionSignal (qint32 x, qint32 y);
     void rfbFrameBufferUpdateSignal();

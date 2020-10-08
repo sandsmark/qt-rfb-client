@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
     qputenv("QT_QPA_PLATFORM", "epaper:enable_fonts");
     QApplication a(argc, argv);
     EPFrameBuffer::clearScreen();
-
     vncclientwidget2cls vnc;
 //    vnc.connectVNCTCP("10.11.99.2", 3389); // connect via TCP
     vnc.connectVNCTCP("10.11.99.2", 5900); // connect via TCP

@@ -45,9 +45,15 @@ rfbclientwidgetcls::rfbclientwidgetcls(QWidget *parent) :
     this->mouseY = 0;
     pl.setColor(QPalette::Background, Qt::black);
     this->setPalette(pl);
-    this->resize(640, 480);
-    this->setMinimumSize(640, 480);
-    this->setMaximumSize(640, 480);
+
+#ifdef RM_DEVICE
+    const QSize screenSize(1872, 1404);
+#else
+    const QSize screenSize(640, 480);
+#endif
+    this->resize(screenSize);
+    this->setMinimumSize(screenSize);
+    this->setMaximumSize(screenSize);
     this->holdCTRLKey = false;
     this->screenGrab = false;
     connect(&this->vncClient, SIGNAL(rfbResizeSignal(qint16, qint16, QString)), this, SLOT(vncResizeSlot(qint16, qint16, QString)), Qt::DirectConnection);
@@ -102,7 +108,11 @@ void rfbclientwidgetcls::vncHostDisconnectedSlot()
         this->releaseMouse();
 
         if (!this->lockedVNC) {
+#ifdef RM_DEVICE
+            this->resize(1872, 1404);
+#else
             this->resize(640, 480);
+#endif
         }
     }
 
@@ -129,9 +139,15 @@ void rfbclientwidgetcls::vncResizeSlot(qint16 width, qint16 height, QString serv
     this->oriRFBHeight = height;
     this->oriRFBWidth = width;
     //this->resize(width,height);
+#ifdef RM_DEVICE
+    this->setMinimumHeight(1404);
+    this->setMinimumWidth(1872);
+#else
     this->setMinimumHeight(480);
-    this->setMaximumHeight(height);
     this->setMinimumWidth(640);
+#endif
+
+    this->setMaximumHeight(height);
     this->setMaximumWidth(width);
     this->resize(width, height);
     emit this->vncFrameResizeSignal();

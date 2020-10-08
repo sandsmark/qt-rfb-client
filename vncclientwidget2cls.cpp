@@ -37,7 +37,11 @@ vncclientwidget2cls::vncclientwidget2cls(QWidget *parent) :
     this->widgetResizing = false;
     this->rfbWidget.setParent(this);
     this->rfbWidget.hide();
+#ifdef RM_DEVICE
+    this->setMinimumSize(1872, 1404);
+#else
     this->setMinimumSize(640, 480);
+#endif
     connect(&this->rfbWidget, SIGNAL(vncFrameResizeSignal()), this, SLOT(vncFrameResizeSlot()));
     connect(&this->rfbWidget, SIGNAL(rfbClientDisconnectedSignal()), this, SLOT(rfbClientDisconnectedSlot()));
     connect(&this->rfbWidget, SIGNAL(rfbClientPauseSignal()), this, SLOT(rfbClientPauseSlot()));
@@ -45,7 +49,11 @@ vncclientwidget2cls::vncclientwidget2cls(QWidget *parent) :
     connect(&this->rfbWidget, SIGNAL(vncUngrabIOSIG()), this, SLOT(rfbClientScreenUnlockSlot()));
     this->rfbWidget.move(0, 0);
     this->rfbWidget.show();
+#ifdef RM_DEVICE
+    this->resize(1872, 1404);
+#else
     this->resize(640, 480);
+#endif
 }
 
 vncclientwidget2cls::~vncclientwidget2cls()

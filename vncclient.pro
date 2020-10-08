@@ -15,7 +15,10 @@ INSTALLS += target
 QMAKE_CXXFLAGS_DEBUG *= -pg
 QMAKE_LFLAGS_DEBUG *= -pg
 
-LIBS += -lqsgepaper
+contains(QT_ARCH, arm) {
+    LIBS += -lqsgepaper
+    DEFINES += RM_DEVICE
+}
 
 
 SOURCES += main.cpp \

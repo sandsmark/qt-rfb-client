@@ -29,16 +29,25 @@
 #include "vncclientwidget2cls.h"
 #include "rfbclientwidgetcls.h"
 #include "vncclientwidget2cls.h"
+
+#ifdef RM_DEVICE
 #include <epframebuffer.h>
+#endif
 
 int main(int argc, char *argv[])
 {
+#ifdef RM_DEVICE
     qputenv("QT_QPA_PLATFORM", "epaper:enable_fonts");
+#endif
+
     QApplication a(argc, argv);
-    EPFrameBuffer::clearScreen();
     vncclientwidget2cls vnc;
-//    vnc.connectVNCTCP("10.11.99.2", 3389); // connect via TCP
+#ifdef RM_DEVICE
+    EPFrameBuffer::clearScreen();
     vnc.connectVNCTCP("10.11.99.2", 5900); // connect via TCP
+#else
+    vnc.connectVNCTCP("localhost", 3389); // connect via TCP
+#endif
     //vnc.connectVNCIPC("/var/nemd3/nemd3vnc"); connect via UNIX socket
     vnc.show();
     return a.exec();

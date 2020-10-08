@@ -26,7 +26,10 @@
  */
 
 #include "rfbclientwidgetcls.h"
+
+#ifdef RM_DEVICE
 #include <epframebuffer.h>
+#endif
 
 rfbclientwidgetcls::rfbclientwidgetcls(QWidget *parent) :
     QWidget(parent)
@@ -146,15 +149,23 @@ QImage rfbclientwidgetcls::getScreenCapture()
 
 void rfbclientwidgetcls::paintEvent(QPaintEvent *)
 {
+#ifdef RM_DEVICE
     EPFrameBuffer::framebuffer()->fill(Qt::white);
     QPainter qp(EPFrameBuffer::framebuffer());
+#else
+    QPainter qp(this);
+#endif
     //qDebug() << "Scaling Img";
     QImage timg = this->vncClient.getVNCImage().scaled(this->geometry().width(), this->geometry().height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     //QPixmap tpix = this->vncClient->getVNCPixmap().scaled(this->geometry().width(),this->geometry().height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
     //qp.drawPixmap(0,0,tpix);
     qp.drawImage(0, 0, timg);
     qp.end();
+
+#ifdef RM_DEVICE
     EPFrameBuffer::sendUpdate(rect(), EPFrameBuffer::Grayscale, EPFrameBuffer::PartialUpdate);
+#endif
+
     //qDebug() << "update image";
 }
 
